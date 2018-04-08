@@ -12,8 +12,8 @@ import (
 // Handler is handle function responsible to process incoming data.
 type Handler func([]byte) error
 
-// Service handles data and traffic parameters.
-type Service struct {
+// Mux handles data and traffic parameters.
+type Mux struct {
 	*logrus.Entry
 	*Config
 
@@ -22,19 +22,30 @@ type Service struct {
 	sync.Map
 }
 
-// NewMux returns a new clear Service.
-func NewMux() *Service {
-	return &Service{}
+// NewMux returns a new clear Mux.
+func NewMux() *Mux {
+	return &Mux{}
+}
+
+// Dial starts the mux server.
+func (m *Mux) Dial(cfg Config) error {
+	return m.Server.Dial(cfg)
+}
+
+// Close resets the clients map and closes the server.
+func (m *Mux) Close() error {
+	m.Map = sync.Map{}
+	return m.Server.Close()
 }
 
 // Add adds a new handler identified by a string.
-func (s *Service) Add(identifier string, f Handler) {
-	s.Store(identifier, f)
+func (m *Mux) Add(identifier string, f Handler) {
+	m.Store(identifier, f)
 }
 
 // Get returns a previously added handler identified by a string.
-func (s *Service) Get(identifier string) (Handler, error) {
-	f, ok := s.Load(identifier)
+func (m *Mux) Get(identifier string) (Handler, error) {
+	f, ok := m.Load(identifier)
 	if !ok {
 		return nil, fmt.Errorf("handler %s doesn't exist", identifier)
 	}
@@ -42,30 +53,30 @@ func (s *Service) Get(identifier string) (Handler, error) {
 }
 
 // Read reads one packet from Conn and run it in identifier handler.
-func (s *Service) Read() error {
+func (m *Mux) Read() error {
 	for {
-		packet := make([]byte, s.PacketSize)
-		_, err := s.Server.Read(packet)
+		packet := make([]byte, m.PacketSize)
+		_, err := m.Server.Read(packet)
 		if err != nil {
-			s.Logger.WithField("error", err).Error("failed to read")
+			m.Logger.WithField("error", err).Error("failed to read")
 			return err
 		}
 		go func(packet []byte) {
-			s.Logger.WithFields(logrus.Fields{
+			m.Logger.WithFields(logrus.Fields{
 				"type":   "packet",
 				"status": "received",
 				"data":   string(packet),
 			}).Info("packet read successfully")
 
-			fbs := make([]byte, s.PacketSize)
+			fbs := make([]byte, m.PacketSize)
 			if err := lz4.Uncompress(packet, fbs); err != nil {
-				s.Logger.WithFields(logrus.Fields{
+				m.Logger.WithFields(logrus.Fields{
 					"type":   "packet",
 					"format": "lz4",
 					"status": "received",
 					"error":  err,
 				}).Error("packet failed to uncompress")
-				s.Logger.WithField("error", err).WithField("format", "lz4").Info("packet")
+				m.Logger.WithField("error", err).WithField("format", "lz4").Info("packet")
 				return
 			}
 		}(packet)
@@ -73,9 +84,9 @@ func (s *Service) Read() error {
 }
 
 // Write writes one packet to conn opened previously in conn map.
-func (s *Service) Write(packet []byte, identifier string) {
-	if uint(len(packet)) > s.PacketSize {
-		s.Logger.WithFields(logrus.Fields{
+func (m *Mux) Write(packet []byte, identifier string) {
+	if uint(len(packet)) > m.PacketSize {
+		m.Logger.WithFields(logrus.Fields{
 			"type":   "packet",
 			"status": "failed",
 			"error":  errors.New("packet too large"),
@@ -83,9 +94,9 @@ func (s *Service) Write(packet []byte, identifier string) {
 		return
 	}
 	go func() {
-		client, err := s.Clients.Get(identifier)
+		client, err := m.Clients.Get(identifier)
 		if err != nil {
-			s.Logger.WithFields(logrus.Fields{
+			m.Logger.WithFields(logrus.Fields{
 				"type":       "connection",
 				"status":     "unknown",
 				"identifier": identifier,
@@ -95,7 +106,7 @@ func (s *Service) Write(packet []byte, identifier string) {
 		}
 		n, err := client.Write(packet)
 		if err != nil {
-			s.Logger.WithFields(logrus.Fields{
+			m.Logger.WithFields(logrus.Fields{
 				"type":       "packet",
 				"status":     "failed",
 				"identifier": identifier,
@@ -103,7 +114,7 @@ func (s *Service) Write(packet []byte, identifier string) {
 			}).Error("packet not sent")
 			return
 		}
-		s.Logger.WithFields(logrus.Fields{
+		m.Logger.WithFields(logrus.Fields{
 			"type":       "packet",
 			"status":     "sent",
 			"identifier": identifier,

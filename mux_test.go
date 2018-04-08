@@ -9,8 +9,8 @@ import (
 func TestDial(t *testing.T) {
 	message := []byte("To you rudy")
 	t.Run("up", func(t *testing.T) {
-		s := Server{}
-		l := s.NewLauncher(Namespaces{UDP: "server"}, "server")
+		mux := Mux{}
+		l := mux.NewLauncher(Namespaces{UDP: "server"}, "server")
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
 				"address":     "localhost:8080",
@@ -30,7 +30,7 @@ func TestDial(t *testing.T) {
 			t.Fatal(err)
 		}
 		rec := make([]byte, len(message))
-		_, _, err = s.ReadFromUDP(rec)
+		_, _, err = mux.ReadFromUDP(rec)
 		if err != nil {
 			t.Fatal(err)
 		}

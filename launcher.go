@@ -16,15 +16,15 @@ type Launcher struct {
 	*services.Configs
 	ns Namespaces
 
-	s *Server
-	m sync.Mutex
+	mux *Mux
+	m   sync.Mutex
 }
 
 // NewLauncher returns a new udp Launcher.
-func (s *Server) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
+func (mux *Mux) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
 	return &Launcher{
 		Configs: services.NewConfigs(nsRead...),
-		s:       s,
+		mux:     mux,
 		ns:      ns,
 	}
 }
@@ -39,7 +39,7 @@ func (l *Launcher) Up(configs services.Configs) error {
 		// Add namespace key when returning error with logrus
 		return err
 	}
-	return l.s.Dial(cfg)
+	return l.mux.Dial(cfg)
 }
 
 // Down stops the udp service.
@@ -47,5 +47,5 @@ func (l *Launcher) Down(configs services.Configs) error {
 	l.m.Lock()
 	defer l.m.Unlock()
 
-	return l.s.Close()
+	return l.mux.Close()
 }
