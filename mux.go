@@ -57,9 +57,18 @@ func (m *Mux) Get(identifier string) (Handler, error) {
 func (m *Mux) Read() error {
 	for {
 		packet := make([]byte, m.PacketSize)
-		_, err := m.Server.Read(packet)
+		n, _, err := m.Server.ReadFromUDP(packet)
 		if err != nil {
 			m.Logger.WithField("error", err).Error("failed to read")
+			return err
+		}
+		if uint(n) > m.PacketSize {
+			err := errors.New("packet too large")
+			m.Logger.WithFields(logrus.Fields{
+				"type":   "packet",
+				"status": "failed",
+				"error":  err,
+			}).Error("packet rejected")
 			return err
 		}
 		go func(packet []byte) {
@@ -76,10 +85,10 @@ func (m *Mux) Read() error {
 					"format": "lz4",
 					"status": "received",
 					"error":  err,
-				}).Error("packet not read")
+				}).Error("packet rejected")
 				return
 			}
-		}(packet)
+		}(packet[:n])
 	}
 }
 
@@ -105,7 +114,7 @@ func (m *Mux) Write(raw []byte, identifier string) error {
 		}).Error("packet not sent")
 		return err
 	}
-	go func() {
+	go func(packet []byte) {
 		client, err := m.Clients.Get(identifier)
 		if err != nil {
 			m.Logger.WithFields(logrus.Fields{
@@ -132,6 +141,6 @@ func (m *Mux) Write(raw []byte, identifier string) error {
 			"identifier": identifier,
 			"size":       n,
 		}).Info("packet sent")
-	}()
+	}(packet[:n])
 	return nil
 }
