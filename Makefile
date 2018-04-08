@@ -16,10 +16,10 @@ M = $(shell printf "\033[0;35m▶\033[0m")
 all: check
 
 # Dependencies
-.PHONY: deps
-deps:
+.PHONY: dep
+dep:
 	$(info $(M) building vendor…) @
-	$Q dep ensure -vendor-only
+	$Q dep ensure
 
 # Check
 .PHONY: check

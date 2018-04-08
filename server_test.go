@@ -13,7 +13,8 @@ func TestDial(t *testing.T) {
 		l := s.NewLauncher(Namespaces{UDP: "server"}, "server")
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
-				"address": "localhost:8080",
+				"address":     "localhost:8080",
+				"packet_size": uint(1024),
 			},
 		}); err != nil {
 			t.Fatal(err)

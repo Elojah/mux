@@ -6,7 +6,8 @@ import (
 
 // Config is a UDP server config.
 type Config struct {
-	Address string
+	Address    string `json:"address"`
+	PacketSize uint   `json:"packet_size"`
 }
 
 // Equal returns is both configs are equal.
@@ -26,6 +27,13 @@ func (c *Config) Dial(fileconf interface{}) error {
 	}
 	if c.Address, ok = cAddress.(string); !ok {
 		return errors.New("key address invalid. must be string")
+	}
+	cPacketSize, ok := fconf["packet_size"]
+	if !ok {
+		return errors.New("missing key packet_size")
+	}
+	if c.PacketSize, ok = cPacketSize.(uint); !ok {
+		return errors.New("key packet_size invalid. must be uint")
 	}
 	return nil
 }

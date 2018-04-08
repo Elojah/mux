@@ -6,12 +6,12 @@ import (
 	"github.com/elojah/services"
 )
 
-// Namespaces maps configs used for couchbase service with config file namespaces.
+// Namespaces maps configs used for udp service with config file namespaces.
 type Namespaces struct {
 	UDP services.Namespace
 }
 
-// Launcher represents a couchbase launcher.
+// Launcher represents a udp launcher.
 type Launcher struct {
 	*services.Configs
 	ns Namespaces
@@ -20,7 +20,7 @@ type Launcher struct {
 	m sync.Mutex
 }
 
-// NewLauncher returns a new couchbase Launcher.
+// NewLauncher returns a new udp Launcher.
 func (s *Server) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
 	return &Launcher{
 		Configs: services.NewConfigs(nsRead...),
@@ -29,7 +29,7 @@ func (s *Server) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launc
 	}
 }
 
-// Up starts the couchbase service with new configs.
+// Up starts the udp service with new configs.
 func (l *Launcher) Up(configs services.Configs) error {
 	l.m.Lock()
 	defer l.m.Unlock()
@@ -42,7 +42,7 @@ func (l *Launcher) Up(configs services.Configs) error {
 	return l.s.Dial(cfg)
 }
 
-// Down stops the couchbase service.
+// Down stops the udp service.
 func (l *Launcher) Down(configs services.Configs) error {
 	l.m.Lock()
 	defer l.m.Unlock()
