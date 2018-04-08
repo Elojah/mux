@@ -29,6 +29,7 @@ func NewMux() *Mux {
 
 // Dial starts the mux server.
 func (m *Mux) Dial(cfg Config) error {
+	m.Config = &cfg
 	return m.Server.Dial(cfg)
 }
 
