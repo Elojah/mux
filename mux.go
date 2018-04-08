@@ -67,7 +67,7 @@ func (m *Mux) Read() error {
 				"type":   "packet",
 				"status": "received",
 				"data":   string(packet),
-			}).Info("packet read successfully")
+			}).Info("packet read")
 
 			fbs := make([]byte, m.PacketSize)
 			if err := lz4.Uncompress(packet, fbs); err != nil {
@@ -76,8 +76,7 @@ func (m *Mux) Read() error {
 					"format": "lz4",
 					"status": "received",
 					"error":  err,
-				}).Error("packet failed to uncompress")
-				m.Logger.WithField("error", err).WithField("format", "lz4").Info("packet")
+				}).Error("packet not read")
 				return
 			}
 		}(packet)
@@ -85,14 +84,26 @@ func (m *Mux) Read() error {
 }
 
 // Write writes one packet to conn opened previously in conn map.
-func (m *Mux) Write(packet []byte, identifier string) {
-	if uint(len(packet)) > m.PacketSize {
+func (m *Mux) Write(raw []byte, identifier string) error {
+	packet := make([]byte, m.PacketSize)
+	n, err := lz4.Compress(raw, packet)
+	if err != nil {
+		m.Logger.WithFields(logrus.Fields{
+			"type":   "packet",
+			"format": "lz4",
+			"status": "failed",
+			"error":  err,
+		}).Error("packet not sent")
+		return err
+	}
+	if uint(n) > m.PacketSize {
+		err := errors.New("packet too large")
 		m.Logger.WithFields(logrus.Fields{
 			"type":   "packet",
 			"status": "failed",
-			"error":  errors.New("packet too large"),
+			"error":  err,
 		}).Error("packet not sent")
-		return
+		return err
 	}
 	go func() {
 		client, err := m.Clients.Get(identifier)
@@ -122,4 +133,5 @@ func (m *Mux) Write(packet []byte, identifier string) {
 			"size":       n,
 		}).Info("packet sent")
 	}()
+	return nil
 }
