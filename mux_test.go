@@ -14,7 +14,7 @@ func TestDial(t *testing.T) {
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
 				"address":     "localhost:8080",
-				"packet_size": 1024,
+				"packet_size": float64(1024),
 			},
 		}); err != nil {
 			t.Fatal(err)

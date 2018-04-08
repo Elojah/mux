@@ -32,10 +32,10 @@ func (c *Config) Dial(fileconf interface{}) error {
 	if !ok {
 		return errors.New("missing key packet_size")
 	}
-	cPacketSizeInt, ok := cPacketSize.(int)
+	cPacketSizeFloat, ok := cPacketSize.(float64)
 	if !ok {
 		return errors.New("key packet_size invalid. must be int")
 	}
-	c.PacketSize = uint(cPacketSizeInt)
+	c.PacketSize = uint(cPacketSizeFloat)
 	return nil
 }
