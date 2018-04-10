@@ -72,12 +72,6 @@ func (m *Mux) Read() error {
 			return err
 		}
 		go func(packet []byte) {
-			m.Logger.WithFields(logrus.Fields{
-				"type":   "packet",
-				"status": "received",
-				"data":   string(packet),
-			}).Info("packet read")
-
 			fbs := make([]byte, m.PacketSize)
 			if err := lz4.Uncompress(packet, fbs); err != nil {
 				m.Logger.WithFields(logrus.Fields{
@@ -88,13 +82,18 @@ func (m *Mux) Read() error {
 				}).Error("packet rejected")
 				return
 			}
+			m.Logger.WithFields(logrus.Fields{
+				"type":   "packet",
+				"status": "received",
+				"data":   string(fbs),
+			}).Info("packet read")
 		}(packet[:n])
 	}
 }
 
 // Write writes one packet to conn opened previously in conn map.
 func (m *Mux) Write(raw []byte, identifier string) error {
-	packet := make([]byte, m.PacketSize)
+	packet := make([]byte, lz4.CompressBound(raw))
 	n, err := lz4.Compress(raw, packet)
 	if err != nil {
 		m.Logger.WithFields(logrus.Fields{
