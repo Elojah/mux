@@ -14,10 +14,22 @@
   revision = "d9930d97b9f832fd753fd538ee6d68db5b501b51"
 
 [[projects]]
+  name = "github.com/oklog/ulid"
+  packages = ["."]
+  revision = "d311cb43c92434ec4072dfbbda3400741d0a6337"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
   version = "v1.0.5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/valyala/fastrand"
+  packages = ["."]
+  revision = "19dd0f0bf014a807b05fd196f4da235af618fc94"
 
 [[projects]]
   branch = "master"
@@ -37,6 +49,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e7815f91a3f3e57df4fe1df42bad879a7a721bf2662f411b840df46fba391c8f"
+  inputs-digest = "4644a0f8ca9416cb9dea84782ca90f6027a9c67de0c8e8e3993bd9385d2cd1d4"
   solver-name = "gps-cdcl"
   solver-version = 1

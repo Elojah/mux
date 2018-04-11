@@ -13,7 +13,7 @@ func TestDial(t *testing.T) {
 		l := mux.NewLauncher(Namespaces{UDP: "server"}, "server")
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
-				"address":     "localhost:8080",
+				"address":     "localhost:4242",
 				"packet_size": float64(1024),
 			},
 		}); err != nil {
@@ -22,20 +22,12 @@ func TestDial(t *testing.T) {
 		defer func() { _ = l.Down(nil) }()
 
 		cs := Clients{}
-		conn, err := cs.Get("localhost:8080")
+		conn, err := cs.Get("localhost:4242")
 		if err != nil {
 			t.Fatal(err)
 		}
 		if _, err = conn.Write(message); err != nil {
 			t.Fatal(err)
-		}
-		rec := make([]byte, len(message))
-		_, _, err = mux.ReadFromUDP(rec)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(rec) != string(message) {
-			t.Fatal("corrupted message")
 		}
 	})
 }
