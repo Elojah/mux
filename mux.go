@@ -130,7 +130,7 @@ func (m *Mux) Listen() {
 				"status":     "read",
 				"identifier": identifier,
 				"error":      err,
-			}).Error("packet read")
+			}).Info("packet read")
 			if err := handler(packet); err != nil {
 				m.Logger.WithFields(logrus.Fields{
 					"id":         id,
@@ -148,7 +148,7 @@ func (m *Mux) Listen() {
 				"type":       "packet",
 				"status":     "processed",
 				"identifier": identifier,
-			}).Error("packet processed")
+			}).Info("packet processed")
 		}(raw[:n])
 	}
 }
