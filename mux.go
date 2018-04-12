@@ -123,7 +123,6 @@ func (m *Mux) Listen() {
 				"type":       "packet",
 				"status":     "read",
 				"identifier": identifier,
-				"error":      err,
 			}).Info("packet read")
 			if err := handler(packet); err != nil {
 				m.Logger.WithFields(logrus.Fields{

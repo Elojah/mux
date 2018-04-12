@@ -36,7 +36,6 @@ test:
 lint:
 	$(info $(M) running $(GOLINT)…) @
 	$Q GO_VENDOR=1 $(GOLINT) "--vendor" \
-					"--exclude=.pb.go" \
 					"--disable=gotype" \
 					"--disable=vetshadow" \
 					"--disable=gocyclo" \
