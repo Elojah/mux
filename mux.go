@@ -1,9 +1,9 @@
 package udp
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -11,12 +11,6 @@ import (
 	"github.com/oklog/ulid"
 	"github.com/sirupsen/logrus"
 )
-
-type randReader struct{}
-
-func (randReader) Read(p []byte) (n int, err error) {
-	return rand.Read(p)
-}
 
 // Handler is handle function responsible to process incoming data.
 type Handler func([]byte) error
@@ -77,7 +71,7 @@ func (m *Mux) Listen() {
 			m.Logger.WithField("error", err).Error("failed to read")
 			break
 		}
-		id := ulid.MustNew(ulid.Timestamp(time.Now()), randReader{}).String()
+		id := ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String()
 		if uint(n) > m.PacketSize {
 			err := errors.New("packet too large")
 			m.Logger.WithFields(logrus.Fields{
