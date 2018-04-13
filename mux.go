@@ -3,7 +3,6 @@ package udp
 import (
 	"crypto/rand"
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -22,9 +21,6 @@ type Packet struct {
 // Handler is handle function responsible to process incoming data.
 type Handler func(Packet) error
 
-// Dispatcher is a dispatch function used to dispatch incoming packets.
-type Dispatcher func([]byte) (string, error)
-
 // Mux handles data and traffic parameters.
 type Mux struct {
 	*logrus.Entry
@@ -32,12 +28,10 @@ type Mux struct {
 
 	Server
 	Clients
-	Dispatcher Dispatcher
 
 	Middlewares []Middleware
 
-	// Map stores the different handlers.
-	sync.Map
+	Handler Handler
 }
 
 // NewMux returns a new clear Mux.
@@ -62,20 +56,6 @@ func (m *Mux) Dial(cfg Config) error {
 func (m *Mux) Close() error {
 	m.Map = sync.Map{}
 	return m.Server.Close()
-}
-
-// Add adds a new handler identified by a string.
-func (m *Mux) Add(identifier string, f Handler) {
-	m.Store(identifier, f)
-}
-
-// Get returns a previously added handler identified by a string.
-func (m *Mux) Get(identifier string) (Handler, error) {
-	f, ok := m.Load(identifier)
-	if !ok {
-		return nil, fmt.Errorf("handler %s doesn't exist", identifier)
-	}
-	return f.(Handler), nil
 }
 
 // Listen reads one packet from Conn and run it in identifier handler.
@@ -113,37 +93,15 @@ func (m *Mux) Listen() {
 					return
 				}
 			}
-			identifier, err := m.Dispatcher(packet.Data)
-			if err != nil {
+			if err := m.Handler(packet); err != nil {
 				logger.WithFields(logrus.Fields{
-					"status": "unidentified",
+					"status": "processed",
 					"error":  err,
-				}).Error("packet rejected")
-				return
-			}
-			handler, err := m.Get(identifier)
-			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"status": "unassigned",
-					"error":  err,
-				}).Error("packet rejected")
+				}).Error("packet not processed")
 				return
 			}
 			logger.WithFields(logrus.Fields{
-				"status":     "read",
-				"identifier": identifier,
-			}).Info("packet read")
-			if err := handler(packet); err != nil {
-				logger.WithFields(logrus.Fields{
-					"status":     "processed",
-					"identifier": identifier,
-					"error":      err,
-				}).Error("packet read but failed to be process")
-				return
-			}
-			logger.WithFields(logrus.Fields{
-				"status":     "processed",
-				"identifier": identifier,
+				"status": "processed",
 			}).Info("packet processed")
 		}(Packet{
 			ID:     ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader),
@@ -154,7 +112,7 @@ func (m *Mux) Listen() {
 }
 
 // Send writes one packet to conn opened previously in conn map.
-func (m *Mux) Send(packet Packet, identifier string) error {
+func (m *Mux) Send(packet Packet, address string) error {
 	var err error
 	for _, mw := range m.Middlewares {
 		packet.Data, err = mw.Send(packet.Data)
@@ -166,14 +124,14 @@ func (m *Mux) Send(packet Packet, identifier string) error {
 			}).Error("packet not sent")
 		}
 	}
-	go func(packet Packet, identifier string) {
+	go func(packet Packet, address string) {
 		logger := m.Logger.WithFields(logrus.Fields{
-			"id":         packet.ID.String(),
-			"source":     packet.Source.String(),
-			"type":       "packet",
-			"identifier": identifier,
+			"id":      packet.ID.String(),
+			"source":  packet.Source.String(),
+			"type":    "packet",
+			"address": address,
 		})
-		client, err := m.Clients.Get(identifier)
+		client, err := m.Clients.Get(address)
 		if err != nil {
 			logger.WithFields(logrus.Fields{
 				"status": "unassigned",
@@ -193,6 +151,6 @@ func (m *Mux) Send(packet Packet, identifier string) error {
 			"status": "sent",
 			"size":   n,
 		}).Info("packet sent")
-	}(packet, identifier)
+	}(packet, address)
 	return nil
 }
