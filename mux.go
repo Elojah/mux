@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -12,8 +13,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Middleware interface {
+	Send([]byte) ([]byte, error)
+	Receive([]byte) ([]byte, error)
+}
+
+type Packet struct {
+	ID     ulid.ULID
+	Source *net.UDPAddr
+	Data   []byte
+}
+
 // Handler is handle function responsible to process incoming data.
-type Handler func([]byte) error
+type Handler func(Packet) error
 
 // Dispatcher is a dispatch function used to dispatch incoming packets.
 type Dispatcher func([]byte) (string, error)
@@ -26,6 +38,8 @@ type Mux struct {
 	Server
 	Clients
 	Dispatcher Dispatcher
+
+	Middlewares []Middleware
 
 	// Map stores the different handlers.
 	sync.Map
@@ -71,112 +85,94 @@ func (m *Mux) Listen() {
 			m.Logger.WithField("error", err).Error("failed to read")
 			break
 		}
-		id := ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String()
 		if uint(n) > m.PacketSize {
 			err := errors.New("packet too large")
 			m.Logger.WithFields(logrus.Fields{
-				"id":      id,
 				"address": addr.String(),
 				"type":    "packet",
-				"status":  "unparsable",
+				"status":  "intractable",
 				"error":   err,
 			}).Error("packet rejected")
 			break
 		}
-		go func(raw []byte) {
-			packet := make([]byte, m.PacketSize)
-			if err := lz4.Uncompress(raw, packet); err != nil {
-				m.Logger.WithFields(logrus.Fields{
-					"id":      id,
-					"address": addr.String(),
-					"type":    "packet",
-					"status":  "unreadable",
-					"error":   err,
-				}).Error("packet rejected")
-				return
+		go func(packet Packet) {
+			logger := m.Logger.WithFields(logrus.Fields{
+				"id":      packet.ID.String(),
+				"address": packet.Source.String(),
+				"type":    "packet",
+			})
+			for _, mw := range m.Middlewares {
+				packet.Data, err = mw.Receive(packet.Data)
+				if err != nil {
+					logger.WithFields(logrus.Fields{
+						"status": "unreadable",
+						"error":  err,
+					}).Error("packet rejected")
+					return
+				}
 			}
 			identifier, err := m.Dispatcher(packet)
 			if err != nil {
-				m.Logger.WithFields(logrus.Fields{
-					"id":      id,
-					"address": addr.String(),
-					"type":    "packet",
-					"status":  "unidentified",
-					"error":   err,
+				logger.WithFields(logrus.Fields{
+					"status": "unidentified",
+					"error":  err,
 				}).Error("packet rejected")
 				return
 			}
 			handler, err := m.Get(identifier)
 			if err != nil {
-				m.Logger.WithFields(logrus.Fields{
-					"id":      id,
-					"address": addr.String(),
-					"type":    "handler",
-					"status":  "unknown",
-					"error":   err,
+				logger.WithFields(logrus.Fields{
+					"status": "unassigned",
+					"error":  err,
 				}).Error("packet rejected")
 				return
 			}
-			m.Logger.WithFields(logrus.Fields{
-				"id":         id,
-				"address":    addr.String(),
-				"type":       "packet",
+			logger.WithFields(logrus.Fields{
 				"status":     "read",
 				"identifier": identifier,
 			}).Info("packet read")
 			if err := handler(packet); err != nil {
-				m.Logger.WithFields(logrus.Fields{
-					"id":         id,
-					"address":    addr.String(),
-					"type":       "packet",
+				logger.WithFields(logrus.Fields{
 					"status":     "processed",
 					"identifier": identifier,
 					"error":      err,
 				}).Error("packet read but failed to be process")
 				return
 			}
-			m.Logger.WithFields(logrus.Fields{
-				"id":         id,
-				"address":    addr.String(),
-				"type":       "packet",
+			logger.WithFields(logrus.Fields{
 				"status":     "processed",
 				"identifier": identifier,
 			}).Info("packet processed")
-		}(raw[:n])
+		}(Packet{
+			ID:     ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader),
+			Source: addr,
+			Data:   raw[:n],
+		})
 	}
 }
 
 // Send writes one packet to conn opened previously in conn map.
-func (m *Mux) Send(id string, raw []byte, identifier string) error {
-	packet := make([]byte, lz4.CompressBound(raw))
-	n, err := lz4.Compress(raw, packet)
-	if err != nil {
-		m.Logger.WithFields(logrus.Fields{
-			"id":     id,
-			"type":   "packet",
-			"format": "lz4",
-			"status": "failed",
-			"error":  err,
-		}).Error("packet not sent")
-		return err
+func (m *Mux) Send(packet Packet, identifier string) error {
+	for _, mw := range m.Middlewares {
+		packet.Data, err = mw.Send(packet.Data)
+		if err != nil {
+			m.Logger.WithFields(logrus.Fields{
+				"type":   "packet",
+				"status": "failed",
+				"error":  err,
+			}).Error("packet not sent")
+		}
 	}
-	if uint(n) > m.PacketSize {
-		err := errors.New("packet too large")
-		m.Logger.WithFields(logrus.Fields{
-			"id":     id,
+	go func(packet Packet) {
+		logger := m.Logger.WithFields(logrus.Fields{
+			"id":     packet.ID.String(),
+			"source": packet.Source.String(),
 			"type":   "packet",
-			"status": "failed",
-			"error":  err,
-		}).Error("packet not sent")
-		return err
-	}
-	go func(packet []byte) {
+		})
 		client, err := m.Clients.Get(identifier)
 		if err != nil {
 			m.Logger.WithFields(logrus.Fields{
-				"id":         id,
-				"type":       "connection",
-				"status":     "unknown",
+				"status":     "unassigned",
 				"identifier": identifier,
 				"error":      err,
 			}).Error("packet not sent")
@@ -200,6 +196,6 @@ func (m *Mux) Send(id string, raw []byte, identifier string) error {
 			"identifier": identifier,
 			"size":       n,
 		}).Info("packet sent")
-	}(packet[:n])
+	}(packet)
 	return nil
 }
