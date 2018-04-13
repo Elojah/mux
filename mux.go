@@ -12,12 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Middleware transforms and follow throught data when sending and/or receiving.
-type Middleware interface {
-	Send([]byte) ([]byte, error)
-	Receive([]byte) ([]byte, error)
-}
-
 // Packet represents a network packet sent or received.
 type Packet struct {
 	ID     ulid.ULID
@@ -54,6 +48,13 @@ func NewMux() *Mux {
 // Dial starts the mux server.
 func (m *Mux) Dial(cfg Config) error {
 	m.Config = &cfg
+	for _, mw := range cfg.Middlewares {
+		switch mw {
+		case "lz4":
+			lz4 := mwlz4{PacketSize: cfg.PacketSize}
+			m.Middlewares = append(m.Middlewares, lz4)
+		}
+	}
 	return m.Server.Dial(cfg)
 }
 
