@@ -8,16 +8,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cloudflare/golz4"
 	"github.com/oklog/ulid"
 	"github.com/sirupsen/logrus"
 )
 
+// Middleware transforms and follow throught data when sending and/or receiving.
 type Middleware interface {
 	Send([]byte) ([]byte, error)
 	Receive([]byte) ([]byte, error)
 }
 
+// Packet represents a network packet sent or received.
 type Packet struct {
 	ID     ulid.ULID
 	Source *net.UDPAddr
@@ -111,7 +112,7 @@ func (m *Mux) Listen() {
 					return
 				}
 			}
-			identifier, err := m.Dispatcher(packet)
+			identifier, err := m.Dispatcher(packet.Data)
 			if err != nil {
 				logger.WithFields(logrus.Fields{
 					"status": "unidentified",
@@ -153,6 +154,7 @@ func (m *Mux) Listen() {
 
 // Send writes one packet to conn opened previously in conn map.
 func (m *Mux) Send(packet Packet, identifier string) error {
+	var err error
 	for _, mw := range m.Middlewares {
 		packet.Data, err = mw.Send(packet.Data)
 		if err != nil {
@@ -163,39 +165,33 @@ func (m *Mux) Send(packet Packet, identifier string) error {
 			}).Error("packet not sent")
 		}
 	}
-	go func(packet Packet) {
+	go func(packet Packet, identifier string) {
 		logger := m.Logger.WithFields(logrus.Fields{
-			"id":     packet.ID.String(),
-			"source": packet.Source.String(),
-			"type":   "packet",
+			"id":         packet.ID.String(),
+			"source":     packet.Source.String(),
+			"type":       "packet",
+			"identifier": identifier,
 		})
 		client, err := m.Clients.Get(identifier)
 		if err != nil {
-			m.Logger.WithFields(logrus.Fields{
-				"status":     "unassigned",
-				"identifier": identifier,
-				"error":      err,
+			logger.WithFields(logrus.Fields{
+				"status": "unassigned",
+				"error":  err,
 			}).Error("packet not sent")
 			return
 		}
-		n, err := client.Write(packet)
+		n, err := client.Write(packet.Data)
 		if err != nil {
-			m.Logger.WithFields(logrus.Fields{
-				"id":         id,
-				"type":       "packet",
-				"status":     "failed",
-				"identifier": identifier,
-				"error":      err,
+			logger.WithFields(logrus.Fields{
+				"status": "failed",
+				"error":  err,
 			}).Error("packet not sent")
 			return
 		}
-		m.Logger.WithFields(logrus.Fields{
-			"id":         id,
-			"type":       "packet",
-			"status":     "sent",
-			"identifier": identifier,
-			"size":       n,
+		logger.WithFields(logrus.Fields{
+			"status": "sent",
+			"size":   n,
 		}).Info("packet sent")
-	}(packet)
+	}(packet, identifier)
 	return nil
 }
