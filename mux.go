@@ -94,10 +94,7 @@ func (m *Mux) Listen() {
 				}
 			}
 			if err := m.Handler(packet); err != nil {
-				logger.WithFields(logrus.Fields{
-					"status": "unprocessed",
-					"error":  err,
-				}).Error("packet rejected")
+				// Logging must be done inside handler.
 				return
 			}
 			logger.WithFields(logrus.Fields{
