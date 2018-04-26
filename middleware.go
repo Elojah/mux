@@ -1,4 +1,4 @@
-package udp
+package mux
 
 import (
 	"github.com/cloudflare/golz4"

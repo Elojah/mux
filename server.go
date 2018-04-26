@@ -1,4 +1,4 @@
-package udp
+package mux
 
 import (
 	"net"
@@ -6,17 +6,13 @@ import (
 
 // Server wraps an UDP connection.
 type Server struct {
-	*net.UDPConn
+	net.Listener
 }
 
 // Dial init the UDP server.
 func (s *Server) Dial(c Config) error {
 	var err error
-	address, err := net.ResolveUDPAddr("udp", c.Address)
-	if err != nil {
-		return err
-	}
-	s.UDPConn, err = net.ListenUDP("udp", address)
+	s.Listener, err = net.Listen(c.ServerProtocol, c.Address)
 	return err
 }
 

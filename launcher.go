@@ -1,4 +1,4 @@
-package udp
+package mux
 
 import (
 	"sync"
@@ -6,12 +6,12 @@ import (
 	"github.com/elojah/services"
 )
 
-// Namespaces maps configs used for udp service with config file namespaces.
+// Namespaces maps configs used for mux service with config file namespaces.
 type Namespaces struct {
-	UDP services.Namespace
+	Mux services.Namespace
 }
 
-// Launcher represents a udp launcher.
+// Launcher represents a mux launcher.
 type Launcher struct {
 	*services.Configs
 	ns Namespaces
@@ -20,7 +20,7 @@ type Launcher struct {
 	m   sync.Mutex
 }
 
-// NewLauncher returns a new udp Launcher.
+// NewLauncher returns a new mux Launcher.
 func (mux *Mux) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
 	return &Launcher{
 		Configs: services.NewConfigs(nsRead...),
@@ -29,20 +29,20 @@ func (mux *Mux) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launch
 	}
 }
 
-// Up starts the udp service with new configs.
+// Up starts the mux service with new configs.
 func (l *Launcher) Up(configs services.Configs) error {
 	l.m.Lock()
 	defer l.m.Unlock()
 
 	cfg := Config{}
-	if err := cfg.Dial(configs[l.ns.UDP]); err != nil {
+	if err := cfg.Dial(configs[l.ns.Mux]); err != nil {
 		// Add namespace key when returning error with logrus
 		return err
 	}
 	return l.mux.Dial(cfg)
 }
 
-// Down stops the udp service.
+// Down stops the mux service.
 func (l *Launcher) Down(configs services.Configs) error {
 	l.m.Lock()
 	defer l.m.Unlock()

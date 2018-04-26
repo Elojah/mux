@@ -1,33 +1,33 @@
-package udp
+package mux
 
 import (
+	"context"
 	"crypto/rand"
-	"errors"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/oklog/ulid"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog/log"
 )
 
-// Packet represents a network packet sent or received.
-type Packet struct {
-	ID     ulid.ULID
-	Source *net.UDPAddr
-	Data   []byte
-}
+// Key represents context keys.
+type Key string
+
+const (
+	// Address is the context key for remote address of connection.
+	Address Key = "address"
+	// Packet is the context key for packet id assigned when received.
+	Packet Key = "packet"
+)
 
 // Handler is handle function responsible to process incoming data.
-type Handler func(Packet) error
+type Handler func(context.Context, []byte) error
 
 // Mux handles data and traffic parameters.
 type Mux struct {
-	*logrus.Entry
 	*Config
 
 	Server
-	Clients
 
 	Middlewares []Middleware
 
@@ -54,100 +54,52 @@ func (m *Mux) Dial(cfg Config) error {
 
 // Close resets the clients map and closes the server.
 func (m *Mux) Close() error {
-	m.Map = sync.Map{}
 	return m.Server.Close()
 }
 
 // Listen reads one packet from Conn and run it in identifier handler.
 func (m *Mux) Listen() {
 	for {
-		raw := make([]byte, m.PacketSize)
-		n, addr, err := m.Server.ReadFromUDP(raw)
+		conn, err := m.Server.Accept()
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, Address, conn.RemoteAddr().String())
 		if err != nil {
-			m.Logger.WithField("error", err).Error("failed to read")
-			break
+			log.Ctx(ctx).Error().Msg("connection refused")
 		}
-		if uint(n) > m.PacketSize {
-			err := errors.New("packet too large")
-			m.Logger.WithFields(logrus.Fields{
-				"address": addr.String(),
-				"type":    "packet",
-				"status":  "intractable",
-				"error":   err,
-			}).Error("packet rejected")
-			break
-		}
-		go func(packet Packet) {
-			logger := m.Logger.WithFields(logrus.Fields{
-				"id":      packet.ID.String(),
-				"address": packet.Source.String(),
-				"type":    "packet",
-			})
-			for _, mw := range m.Middlewares {
-				packet.Data, err = mw.Receive(packet.Data)
-				if err != nil {
-					logger.WithFields(logrus.Fields{
-						"status": "unreadable",
-						"error":  err,
-					}).Error("packet rejected")
-					return
-				}
-			}
-			if err := m.Handler(packet); err != nil {
-				// Logging must be done inside handler.
-				return
-			}
-			logger.WithFields(logrus.Fields{
-				"status": "processed",
-			}).Info("packet processed")
-		}(Packet{
-			ID:     ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader),
-			Source: addr,
-			Data:   raw[:n],
-		})
-	}
-}
 
-// Send writes one packet to conn opened previously in conn map.
-func (m *Mux) Send(packet Packet, address string) error {
-	var err error
-	for _, mw := range m.Middlewares {
-		packet.Data, err = mw.Send(packet.Data)
-		if err != nil {
-			m.Logger.WithFields(logrus.Fields{
-				"type":   "packet",
-				"status": "failed",
-				"error":  err,
-			}).Error("packet not sent")
-		}
+		go func(ctx context.Context, conn net.Conn) {
+			defer func() { _ = conn.Close() }()
+			log.Ctx(ctx).Info().Msg("connection accepted")
+			raw := make([]byte, m.PacketSize)
+
+			for {
+				n, err := conn.Read(raw)
+				if err != nil {
+					log.Ctx(ctx).Error().Err(err).Msg("failed to read")
+					continue
+				}
+
+				go func(ctx context.Context, raw []byte) {
+					ctx = context.WithValue(ctx, Packet, ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader))
+					if uint(n) > m.PacketSize {
+						log.Ctx(ctx).Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
+						return
+					}
+
+					for _, mw := range m.Middlewares {
+						raw, err = mw.Receive(raw)
+						if err != nil {
+							log.Ctx(ctx).Error().Err(err).Str("status", "invalid").Msg("packet rejected")
+							return
+						}
+					}
+					if err := m.Handler(ctx, raw); err != nil {
+						// Logging must be done inside handler.
+						return
+					}
+					log.Ctx(ctx).Info().Str("status", "processed").Msg("packet processed")
+				}(ctx, raw[:n])
+			}
+		}(ctx, conn)
 	}
-	go func(packet Packet, address string) {
-		logger := m.Logger.WithFields(logrus.Fields{
-			"id":      packet.ID.String(),
-			"source":  packet.Source.String(),
-			"type":    "packet",
-			"address": address,
-		})
-		client, err := m.Clients.Get(address)
-		if err != nil {
-			logger.WithFields(logrus.Fields{
-				"status": "unassigned",
-				"error":  err,
-			}).Error("packet not sent")
-			return
-		}
-		n, err := client.Write(packet.Data)
-		if err != nil {
-			logger.WithFields(logrus.Fields{
-				"status": "failed",
-				"error":  err,
-			}).Error("packet not sent")
-			return
-		}
-		logger.WithFields(logrus.Fields{
-			"status": "sent",
-			"size":   n,
-		}).Info("packet sent")
-	}(packet, address)
-	return nil
 }

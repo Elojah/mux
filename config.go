@@ -1,4 +1,4 @@
-package udp
+package mux
 
 import (
 	"errors"
@@ -6,9 +6,10 @@ import (
 
 // Config is a UDP server config.
 type Config struct {
-	Address     string   `json:"address"`
-	Middlewares []string `json:"middlewares"`
-	PacketSize  uint     `json:"packet_size"`
+	Address        string   `json:"address"`
+	ServerProtocol string   `json:"server_protocol"`
+	Middlewares    []string `json:"middlewares"`
+	PacketSize     uint     `json:"packet_size"`
 }
 
 // Equal returns is both configs are equal.
@@ -28,6 +29,13 @@ func (c *Config) Dial(fileconf interface{}) error {
 	}
 	if c.Address, ok = cAddress.(string); !ok {
 		return errors.New("key address invalid. must be string")
+	}
+	cServerProtocol, ok := fconf["server_protocol"]
+	if !ok {
+		return errors.New("missing key server_protocol")
+	}
+	if c.ServerProtocol, ok = cServerProtocol.(string); !ok {
+		return errors.New("key server_protocol invalid. must be string")
 	}
 	cPacketSize, ok := fconf["packet_size"]
 	if !ok {
