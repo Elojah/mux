@@ -20,29 +20,19 @@
   version = "v0.3.0"
 
 [[projects]]
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
-  version = "v1.0.5"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
-  revision = "b2aa35443fbc700ab74c586ae79b81c171851023"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/sys"
+  name = "github.com/rs/zerolog"
   packages = [
-    "unix",
-    "windows"
+    ".",
+    "internal/cbor",
+    "internal/json",
+    "log"
   ]
-  revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
+  revision = "05eafee0eb17d0150591a8f30f0fa592cc9b7471"
+  version = "v1.6.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cdf9171cc74cb6f1dc4b67b985fcc131bb405ef97f4a397c2e57231907a4155d"
+  inputs-digest = "6387f719cd286b7d35b53c061db274667d8a2006fc80aacef869d6e031db3acf"
   solver-name = "gps-cdcl"
   solver-version = 1

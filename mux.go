@@ -23,8 +23,8 @@ const (
 // Handler is handle function responsible to process incoming data.
 type Handler func(context.Context, []byte) error
 
-// Mux handles data and traffic parameters.
-type Mux struct {
+// M handles data and traffic parameters.
+type M struct {
 	*Config
 
 	Server
@@ -34,13 +34,13 @@ type Mux struct {
 	Handler Handler
 }
 
-// NewMux returns a new clear Mux.
-func NewMux() *Mux {
-	return &Mux{}
+// NewM returns a new clear M.
+func NewM() *M {
+	return &M{}
 }
 
 // Dial starts the mux server.
-func (m *Mux) Dial(cfg Config) error {
+func (m *M) Dial(cfg Config) error {
 	m.Config = &cfg
 	for _, mw := range cfg.Middlewares {
 		switch mw {
@@ -53,12 +53,12 @@ func (m *Mux) Dial(cfg Config) error {
 }
 
 // Close resets the clients map and closes the server.
-func (m *Mux) Close() error {
+func (m *M) Close() error {
 	return m.Server.Close()
 }
 
 // Listen reads one packet from Conn and run it in identifier handler.
-func (m *Mux) Listen() {
+func (m *M) Listen() {
 	for {
 		conn, err := m.Server.Accept()
 		ctx := context.Background()

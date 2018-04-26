@@ -10,8 +10,8 @@ import (
 func TestDial(t *testing.T) {
 	message := []byte("To you rudy")
 	t.Run("up", func(t *testing.T) {
-		mux := Mux{}
-		l := mux.NewLauncher(Namespaces{Mux: "server"}, "server")
+		mux := M{}
+		l := mux.NewLauncher(Namespaces{M: "server"}, "server")
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
 				"address":         "localhost:4242",

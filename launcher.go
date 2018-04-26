@@ -8,7 +8,7 @@ import (
 
 // Namespaces maps configs used for mux service with config file namespaces.
 type Namespaces struct {
-	Mux services.Namespace
+	M services.Namespace
 }
 
 // Launcher represents a mux launcher.
@@ -16,12 +16,12 @@ type Launcher struct {
 	*services.Configs
 	ns Namespaces
 
-	mux *Mux
+	mux *M
 	m   sync.Mutex
 }
 
 // NewLauncher returns a new mux Launcher.
-func (mux *Mux) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
+func (mux *M) NewLauncher(ns Namespaces, nsRead ...services.Namespace) *Launcher {
 	return &Launcher{
 		Configs: services.NewConfigs(nsRead...),
 		mux:     mux,
@@ -35,7 +35,7 @@ func (l *Launcher) Up(configs services.Configs) error {
 	defer l.m.Unlock()
 
 	cfg := Config{}
-	if err := cfg.Dial(configs[l.ns.Mux]); err != nil {
+	if err := cfg.Dial(configs[l.ns.M]); err != nil {
 		// Add namespace key when returning error with logrus
 		return err
 	}
