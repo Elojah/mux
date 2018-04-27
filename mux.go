@@ -67,8 +67,8 @@ func (m *M) Listen() {
 			logger := log.With().Str("address", ctx.Value(Key("address")).(string)).Logger()
 			logger.Info().Msg("connection accepted")
 
-			raw := make([]byte, m.PacketSize)
 			for {
+				raw := make([]byte, m.PacketSize)
 				n, err := conn.Read(raw)
 				if err != nil {
 					if err == io.EOF {
@@ -81,7 +81,10 @@ func (m *M) Listen() {
 
 				go func(ctx context.Context, raw []byte) {
 					ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
-					logger := log.With().Str("packet", ctx.Value(Key("packet")).(string)).Logger()
+					logger := log.With().
+						Str("packet", ctx.Value(Key("packet")).(string)).
+						Str("address", ctx.Value(Key("address")).(string)).
+						Logger()
 					if uint(n) > m.PacketSize {
 						logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 						return
