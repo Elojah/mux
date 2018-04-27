@@ -10,16 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Key represents context keys.
-type Key string
-
-const (
-	// Address is the context key for remote address of connection.
-	Address Key = "address"
-	// Packet is the context key for packet id assigned when received.
-	Packet Key = "packet"
-)
-
 // Handler is handle function responsible to process incoming data.
 type Handler func(context.Context, []byte) error
 
@@ -61,8 +51,7 @@ func (m *M) Close() error {
 func (m *M) Listen() {
 	for {
 		conn, err := m.Server.Accept()
-		ctx := context.Background()
-		ctx = context.WithValue(ctx, Address, conn.RemoteAddr().String())
+		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
 		if err != nil {
 			log.Ctx(ctx).Error().Msg("connection refused")
 		}
@@ -76,11 +65,11 @@ func (m *M) Listen() {
 				n, err := conn.Read(raw)
 				if err != nil {
 					log.Ctx(ctx).Error().Err(err).Msg("failed to read")
-					continue
+					return
 				}
 
 				go func(ctx context.Context, raw []byte) {
-					ctx = context.WithValue(ctx, Packet, ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader))
+					ctx = log.With().Str("packet", ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String()).Logger().WithContext(ctx)
 					if uint(n) > m.PacketSize {
 						log.Ctx(ctx).Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 						return
