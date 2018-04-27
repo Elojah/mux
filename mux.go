@@ -56,13 +56,14 @@ func (m *M) Listen() {
 			log.Error().Err(err).Msg("connection refused")
 			continue
 		}
-		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
 
-		go func(ctx context.Context, conn net.Conn) {
+		go func(conn net.Conn) {
 			defer func() { _ = conn.Close() }()
-			log.Ctx(ctx).Info().Msg("connection accepted")
-			raw := make([]byte, m.PacketSize)
 
+			ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
+			log.Ctx(ctx).Info().Msg("connection accepted")
+
+			raw := make([]byte, m.PacketSize)
 			for {
 				n, err := conn.Read(raw)
 				if err != nil {
@@ -95,6 +96,6 @@ func (m *M) Listen() {
 					log.Ctx(ctx).Info().Str("status", "processed").Msg("packet processed")
 				}(ctx, raw[:n])
 			}
-		}(ctx, conn)
+		}(conn)
 	}
 }
