@@ -3,6 +3,7 @@ package mux
 import (
 	"context"
 	"crypto/rand"
+	"io"
 	"net"
 	"time"
 
@@ -64,7 +65,11 @@ func (m *M) Listen() {
 			for {
 				n, err := conn.Read(raw)
 				if err != nil {
-					log.Ctx(ctx).Error().Err(err).Msg("failed to read")
+					if err == io.EOF {
+						log.Ctx(ctx).Info().Msg("connection closed")
+					} else {
+						log.Ctx(ctx).Error().Err(err).Msg("failed to read")
+					}
 					return
 				}
 
