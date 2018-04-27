@@ -55,6 +55,7 @@ func (m *M) Listen() {
 		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
 		if err != nil {
 			log.Ctx(ctx).Error().Msg("connection refused")
+			continue
 		}
 
 		go func(ctx context.Context, conn net.Conn) {
