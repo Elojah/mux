@@ -6,13 +6,13 @@ import (
 
 // Server wraps an UDP connection.
 type Server struct {
-	net.Listener
+	net.PacketConn
 }
 
 // Dial init the UDP server.
 func (s *Server) Dial(c Config) error {
 	var err error
-	s.Listener, err = net.Listen(c.ServerProtocol, c.Address)
+	s.PacketConn, err = net.ListenPacket(c.ServerProtocol, c.Address)
 	return err
 }
 

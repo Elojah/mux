@@ -3,7 +3,6 @@ package mux
 import (
 	"context"
 	"crypto/rand"
-	"io"
 	"net"
 	"time"
 
@@ -54,57 +53,37 @@ func (m *M) Close() error {
 // Listen reads one packet from Conn and run it in identifier handler.
 func (m *M) Listen() {
 	for {
-		conn, err := m.Server.Accept()
+		raw := make([]byte, m.PacketSize)
+		n, addr, err := m.ReadFrom(raw)
 		if err != nil {
-			log.Error().Err(err).Msg("connection refused")
-			continue
+			log.Error().Err(err).Msg("failed to read")
 		}
 
-		go func(conn net.Conn) {
-			defer func() { _ = conn.Close() }()
+		go func(ctx context.Context, addr net.Addr, raw []byte) {
+			ctx := context.WithValue(context.Background(), Key("addr"), addr)
+			ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
+			logger := log.With().
+				Str("packet", ctx.Value(Key("packet")).(string)).
+				Str("addr", ctx.Value(Key("addr")).(string)).
+				Logger()
+			logger.Info().Str("status", "read").Msg("packet read")
+			if uint(n) > m.PacketSize {
+				logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
+				return
+			}
 
-			ctx := context.WithValue(context.Background(), Key("address"), conn.RemoteAddr().String())
-			logger := log.With().Str("address", ctx.Value(Key("address")).(string)).Logger()
-			logger.Info().Msg("connection accepted")
-
-			for {
-				raw := make([]byte, m.PacketSize)
-				n, err := conn.Read(raw)
+			for _, mw := range m.Middlewares {
+				raw, err = mw.Receive(raw)
 				if err != nil {
-					if err == io.EOF {
-						logger.Info().Msg("connection closed")
-					} else {
-						logger.Error().Err(err).Msg("failed to read")
-					}
+					logger.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
 					return
 				}
-
-				go func(ctx context.Context, raw []byte) {
-					ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
-					logger := log.With().
-						Str("packet", ctx.Value(Key("packet")).(string)).
-						Str("address", ctx.Value(Key("address")).(string)).
-						Logger()
-					logger.Info().Str("status", "read").Msg("packet read")
-					if uint(n) > m.PacketSize {
-						logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
-						return
-					}
-
-					for _, mw := range m.Middlewares {
-						raw, err = mw.Receive(raw)
-						if err != nil {
-							logger.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
-							return
-						}
-					}
-					if err := m.Handler(ctx, raw); err != nil {
-						// Logging must be done inside handler.
-						return
-					}
-					logger.Info().Str("status", "processed").Msg("packet processed")
-				}(ctx, raw[:n])
 			}
-		}(conn)
+			if err := m.Handler(ctx, raw); err != nil {
+				// Logging must be done inside handler.
+				return
+			}
+			logger.Info().Str("status", "processed").Msg("packet processed")
+		}(ctx, addr, raw[:n])
 	}
 }
