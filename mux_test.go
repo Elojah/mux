@@ -17,14 +17,14 @@ func TestDial(t *testing.T) {
 				"address":         "localhost:4242",
 				"middlewares":     []interface{}{"lz4"},
 				"packet_size":     float64(1024),
-				"server_protocol": "tcp",
+				"server_protocol": "udp",
 			},
 		}); err != nil {
 			t.Fatal(err)
 		}
 		defer func() { _ = l.Down(nil) }()
 
-		conn, err := net.Dial("tcp", "localhost:4242")
+		conn, err := net.Dial("udp", "localhost:4242")
 		if err != nil {
 			t.Fatal(err)
 		}

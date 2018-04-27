@@ -59,7 +59,7 @@ func (m *M) Listen() {
 			log.Error().Err(err).Msg("failed to read")
 		}
 
-		go func(ctx context.Context, addr net.Addr, raw []byte) {
+		go func(addr net.Addr, raw []byte) {
 			ctx := context.WithValue(context.Background(), Key("addr"), addr)
 			ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
 			logger := log.With().
@@ -84,6 +84,6 @@ func (m *M) Listen() {
 				return
 			}
 			logger.Info().Str("status", "processed").Msg("packet processed")
-		}(ctx, addr, raw[:n])
+		}(addr, raw[:n])
 	}
 }
