@@ -53,7 +53,7 @@ func (m *M) Listen() {
 	for {
 		conn, err := m.Server.Accept()
 		if err != nil {
-			log.Ctx(ctx).Error().Msg("connection refused")
+			log.Error().Err(err).Msg("connection refused")
 			continue
 		}
 		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
