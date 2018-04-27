@@ -11,6 +11,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Key is a context key.
+type Key string
+
 // Handler is handle function responsible to process incoming data.
 type Handler func(context.Context, []byte) error
 
@@ -60,7 +63,7 @@ func (m *M) Listen() {
 		go func(conn net.Conn) {
 			defer func() { _ = conn.Close() }()
 
-			ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
+			ctx := context.WithValue(context.Background(), Key("address"), conn.RemoteAddr().String())
 			log.Ctx(ctx).Info().Msg("connection accepted")
 
 			raw := make([]byte, m.PacketSize)
