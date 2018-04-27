@@ -64,31 +64,33 @@ func (m *M) Listen() {
 			defer func() { _ = conn.Close() }()
 
 			ctx := context.WithValue(context.Background(), Key("address"), conn.RemoteAddr().String())
-			log.Ctx(ctx).Info().Msg("connection accepted")
+			logger := log.Ctx(ctx)
+			logger.Info().Msg("connection accepted")
 
 			raw := make([]byte, m.PacketSize)
 			for {
 				n, err := conn.Read(raw)
 				if err != nil {
 					if err == io.EOF {
-						log.Ctx(ctx).Info().Msg("connection closed")
+						logger.Info().Msg("connection closed")
 					} else {
-						log.Ctx(ctx).Error().Err(err).Msg("failed to read")
+						logger.Error().Err(err).Msg("failed to read")
 					}
 					return
 				}
 
 				go func(ctx context.Context, raw []byte) {
-					ctx = log.With().Str("packet", ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String()).Logger().WithContext(ctx)
+					ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
+					logger := log.Ctx(ctx)
 					if uint(n) > m.PacketSize {
-						log.Ctx(ctx).Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
+						logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 						return
 					}
 
 					for _, mw := range m.Middlewares {
 						raw, err = mw.Receive(raw)
 						if err != nil {
-							log.Ctx(ctx).Error().Err(err).Str("status", "invalid").Msg("packet rejected")
+							logger.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
 							return
 						}
 					}
@@ -96,7 +98,7 @@ func (m *M) Listen() {
 						// Logging must be done inside handler.
 						return
 					}
-					log.Ctx(ctx).Info().Str("status", "processed").Msg("packet processed")
+					logger.Info().Str("status", "processed").Msg("packet processed")
 				}(ctx, raw[:n])
 			}
 		}(conn)
