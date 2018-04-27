@@ -52,11 +52,11 @@ func (m *M) Close() error {
 func (m *M) Listen() {
 	for {
 		conn, err := m.Server.Accept()
-		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
 		if err != nil {
 			log.Ctx(ctx).Error().Msg("connection refused")
 			continue
 		}
+		ctx := log.With().Str("address", conn.RemoteAddr().String()).Logger().WithContext(context.Background())
 
 		go func(ctx context.Context, conn net.Conn) {
 			defer func() { _ = conn.Close() }()
