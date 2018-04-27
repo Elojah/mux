@@ -64,7 +64,7 @@ func (m *M) Listen() {
 			defer func() { _ = conn.Close() }()
 
 			ctx := context.WithValue(context.Background(), Key("address"), conn.RemoteAddr().String())
-			logger := log.Ctx(ctx)
+			logger := log.With().Str("address", ctx.Value(Key("address")).(string)).Logger()
 			logger.Info().Msg("connection accepted")
 
 			raw := make([]byte, m.PacketSize)
@@ -81,7 +81,7 @@ func (m *M) Listen() {
 
 				go func(ctx context.Context, raw []byte) {
 					ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
-					logger := log.Ctx(ctx)
+					logger := log.With().Str("packet", ctx.Value(Key("packet")).(string)).Logger()
 					if uint(n) > m.PacketSize {
 						logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 						return
