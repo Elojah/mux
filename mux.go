@@ -60,7 +60,7 @@ func (m *M) Listen() {
 		}
 
 		go func(addr net.Addr, raw []byte) {
-			ctx := context.WithValue(context.Background(), Key("addr"), addr)
+			ctx := context.WithValue(context.Background(), Key("addr"), addr.String())
 			ctx = context.WithValue(ctx, Key("packet"), ulid.MustNew(ulid.Timestamp(time.Now()), rand.Reader).String())
 			logger := log.With().
 				Str("packet", ctx.Value(Key("packet")).(string)).
