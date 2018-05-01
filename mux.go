@@ -66,7 +66,6 @@ func (m *M) Listen() {
 				Str("packet", ctx.Value(Key("packet")).(string)).
 				Str("addr", ctx.Value(Key("addr")).(string)).
 				Logger()
-			logger.Info().Str("status", "read").Msg("packet read")
 			if uint(n) > m.PacketSize {
 				logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 				return
