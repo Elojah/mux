@@ -6,7 +6,7 @@ import (
 
 // Config is a UDP server config.
 type Config struct {
-	Address        string   `json:"address"`
+	Addresses      []string `json:"addresses"`
 	ServerProtocol string   `json:"server_protocol"`
 	Middlewares    []string `json:"middlewares"`
 	PacketSize     uint     `json:"packet_size"`
@@ -14,7 +14,27 @@ type Config struct {
 
 // Equal returns is both configs are equal.
 func (c Config) Equal(rhs Config) bool {
-	return c.Address == rhs.Address
+
+	if len(c.Addresses) != len(rhs.Addresses) {
+		return false
+	}
+	for i := range c.Addresses {
+		if c.Addresses[i] != rhs.Addresses[i] {
+			return false
+		}
+	}
+
+	if len(c.Middlewares) != len(rhs.Middlewares) {
+		return false
+	}
+	for i := range c.Middlewares {
+		if c.Middlewares[i] != rhs.Middlewares[i] {
+			return false
+		}
+	}
+
+	return c.ServerProtocol == rhs.ServerProtocol &&
+		c.PacketSize == rhs.PacketSize
 }
 
 // Dial set the config from a config namespace.
@@ -23,12 +43,20 @@ func (c *Config) Dial(fileconf interface{}) error {
 	if !ok {
 		return errors.New("namespace empty")
 	}
-	cAddress, ok := fconf["address"]
+	cAddresses, ok := fconf["addresses"]
 	if !ok {
-		return errors.New("missing key address")
+		return errors.New("missing key addresses")
 	}
-	if c.Address, ok = cAddress.(string); !ok {
-		return errors.New("key address invalid. must be string")
+	cAddressesSlice, ok := cAddresses.([]interface{})
+	if !ok {
+		return errors.New("key addresses invalid. must be slice")
+	}
+	c.Addresses = make([]string, len(cAddressesSlice))
+	for i, adress := range cAddressesSlice {
+		c.Addresses[i], ok = adress.(string)
+		if !ok {
+			return errors.New("value in addresses invalid. must be string")
+		}
 	}
 	cServerProtocol, ok := fconf["server_protocol"]
 	if !ok {
