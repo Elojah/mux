@@ -40,7 +40,7 @@ func TestDial(t *testing.T) {
 		if err := l.Up(services.Configs{
 			"server": map[string]interface{}{
 				"addresses":       []interface{}{"127.0.0.1:4243"},
-				"middlewares":     []interface{}{"lz4"},
+				"middlewares":     []interface{}{},
 				"packet_size":     float64(1024),
 				"server_protocol": "udp",
 			},

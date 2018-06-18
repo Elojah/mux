@@ -53,6 +53,15 @@ func (m *M) Close() error {
 // Send sends a packet via a random connection picked.
 // You should run it in a go call.
 func (m *M) Send(raw []byte, addr net.Addr) {
+	for _, mw := range m.Middlewares {
+		var err error
+		raw, err = mw.Send(raw)
+		if err != nil {
+			log.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
+			return
+		}
+	}
+
 	i, err := rand.Int(rand.Reader, m.NConn)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to generate rand for send")
