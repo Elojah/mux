@@ -16,7 +16,7 @@ func (s *Server) Dial(c Config) error {
 	var err error
 	s.Conns = make([]net.PacketConn, len(c.Addresses))
 	for i, address := range c.Addresses {
-		if s.Conns[i], err = net.ListenPacket(c.ServerProtocol, address); err != nil {
+		if s.Conns[i], err = net.ListenPacket("udp", address); err != nil {
 			return err
 		}
 	}

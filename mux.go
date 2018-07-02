@@ -50,31 +50,6 @@ func (m *M) Close() error {
 	return m.Server.Close()
 }
 
-// Send sends a packet via a random connection picked.
-// You should run it in a go call.
-func (m *M) Send(raw []byte, addr net.Addr) {
-	for _, mw := range m.Middlewares {
-		var err error
-		raw, err = mw.Send(raw)
-		if err != nil {
-			log.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
-			return
-		}
-	}
-
-	i, err := rand.Int(rand.Reader, m.NConn)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to generate rand for send")
-		return
-	}
-	n, err := m.Conns[i.Int64()].WriteTo(raw, addr)
-	if err != nil {
-		log.Error().Err(err).Str("address", addr.String()).Msg("failed to send packet")
-		return
-	}
-	log.Info().Int("bytes", n).Str("address", addr.String()).Msg("packet sent")
-}
-
 // Listen reads start listening on all conns.
 func (m *M) Listen() {
 	for _, conn := range m.Conns {

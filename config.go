@@ -6,10 +6,9 @@ import (
 
 // Config is a UDP server config.
 type Config struct {
-	Addresses      []string `json:"addresses"`
-	ServerProtocol string   `json:"server_protocol"`
-	Middlewares    []string `json:"middlewares"`
-	PacketSize     uint     `json:"packet_size"`
+	Addresses   []string `json:"addresses"`
+	Middlewares []string `json:"middlewares"`
+	PacketSize  uint     `json:"packet_size"`
 }
 
 // Equal returns is both configs are equal.
@@ -33,8 +32,7 @@ func (c Config) Equal(rhs Config) bool {
 		}
 	}
 
-	return c.ServerProtocol == rhs.ServerProtocol &&
-		c.PacketSize == rhs.PacketSize
+	return c.PacketSize == rhs.PacketSize
 }
 
 // Dial set the config from a config namespace.
@@ -57,13 +55,6 @@ func (c *Config) Dial(fileconf interface{}) error {
 		if !ok {
 			return errors.New("value in addresses invalid. must be string")
 		}
-	}
-	cServerProtocol, ok := fconf["server_protocol"]
-	if !ok {
-		return errors.New("missing key server_protocol")
-	}
-	if c.ServerProtocol, ok = cServerProtocol.(string); !ok {
-		return errors.New("key server_protocol invalid. must be string")
 	}
 	cPacketSize, ok := fconf["packet_size"]
 	if !ok {

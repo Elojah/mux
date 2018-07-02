@@ -36,7 +36,6 @@ func (l *Launcher) Up(configs services.Configs) error {
 
 	cfg := Config{}
 	if err := cfg.Dial(configs[l.ns.M]); err != nil {
-		// Add namespace key when returning error with logrus
 		return err
 	}
 	return l.mux.Dial(cfg)
