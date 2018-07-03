@@ -34,38 +34,4 @@ func TestDial(t *testing.T) {
 		}
 	})
 
-	t.Run("up send", func(t *testing.T) {
-		m := M{}
-		l := m.NewLauncher(Namespaces{M: "server"}, "server")
-		if err := l.Up(services.Configs{
-			"server": map[string]interface{}{
-				"addresses":       []interface{}{"127.0.0.1:4243"},
-				"middlewares":     []interface{}{},
-				"packet_size":     float64(1024),
-				"server_protocol": "udp",
-			},
-		}); err != nil {
-			t.Fatal(err)
-		}
-		defer func() { _ = l.Down(nil) }()
-
-		conn, err := net.ListenPacket("udp", "127.0.0.1:4244")
-		if err != nil {
-			t.Fatal(err)
-		}
-		listener, _ := net.ResolveUDPAddr("udp", "127.0.0.1:4244")
-		m.Send(message, listener)
-		raw := make([]byte, 100)
-		n, sender, err := conn.ReadFrom(raw)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if n != 11 {
-			t.Fatalf("expected %d bytes, received %d", 11, n)
-		}
-		if sender.String() != "127.0.0.1:4243" {
-			t.Fatalf("expected address %s, received %s", "127.0.0.1:4243", sender.String())
-		}
-	})
-
 }

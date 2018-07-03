@@ -38,7 +38,7 @@ func (m *M) Dial(cfg Config) error {
 	for _, mw := range cfg.Middlewares {
 		switch mw {
 		case "lz4":
-			lz4 := mwlz4{PacketSize: cfg.PacketSize}
+			lz4 := Mwlz4{PacketSize: cfg.PacketSize}
 			m.Middlewares = append(m.Middlewares, lz4)
 		}
 	}
