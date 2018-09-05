@@ -3,7 +3,7 @@ DATE    ?= $(shell date +%FT%T%z)
 VERSION ?= $(shell git describe --tags --always --dirty --match=v* 2> /dev/null || \
 			cat $(CURDIR)/.version 2> /dev/null || echo v0)
 
-GO      = go
+GO      = go1.11
 GODOC   = godoc
 GOFMT   = gofmt
 GOLINT   = gometalinter
@@ -14,12 +14,6 @@ M = $(shell printf "\033[0;35m▶\033[0m")
 
 
 all: check
-
-# Dependencies
-.PHONY: dep
-dep:
-	$(info $(M) building vendor…) @
-	$Q dep ensure
 
 # Check
 .PHONY: check

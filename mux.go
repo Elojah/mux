@@ -78,6 +78,7 @@ func (m *M) listen(conn net.PacketConn) {
 				logger.Error().Err(ErrTooLargePacket).Str("status", "sizeable").Msg("packet rejected")
 				return
 			}
+			raw = raw[:n]
 
 			for _, mw := range m.Middlewares {
 				raw, err = mw.Receive(raw)

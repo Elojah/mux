@@ -1,0 +1,8 @@
+github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 h1:F1EaeKL/ta07PY/k9Os/UFtwERei2/XzGemhpGnBKNg=
+github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58/go.mod h1:EOBUe0h4xcZ5GoxqC5SDxFQ8gwyZPKQoEzownBlhI80=
+github.com/elojah/services v0.0.0-20180629094217-29c33644ab1f h1:VZeixo4Z6OOBEgJ0KjiuJTNUPpfWpsk3qgHYeIfTgn8=
+github.com/elojah/services v0.0.0-20180629094217-29c33644ab1f/go.mod h1:8fqqW2L34+kQ7mR6Xzczw170jITRbPTrIw2itp9xFFM=
+github.com/oklog/ulid v1.0.0 h1:VAaWVMLumjiF1bND+wPeEKJeryp8zwN9C4ehZ0mZtBE=
+github.com/oklog/ulid v1.0.0/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
+github.com/rs/zerolog v1.8.0 h1:Oglcb4i6h42uWacEjomB2MI8gfkwCwTMFaDY3+Vgj5k=
+github.com/rs/zerolog v1.8.0/go.mod h1:YbFCdg8HfsridGWAh22vktObvhZbQsZXe4/zB0OKkWU=
