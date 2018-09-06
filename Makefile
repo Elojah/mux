@@ -15,6 +15,13 @@ M = $(shell printf "\033[0;35m▶\033[0m")
 
 all: check
 
+.PHONY: vendor
+vendor:
+	$(info $(M) running go mod vendor…) @
+	$Q $(GO) mod vendor
+	$Q modvendor -copy="**/*.c **/*.h **/*.proto" -v
+
+
 # Check
 .PHONY: check
 check: lint test
