@@ -20,6 +20,7 @@ type Handler func(context.Context, []byte) error
 type M struct {
 	*Config
 
+	Middlewares []Middleware
 	Server
 
 	Handler Handler
@@ -33,6 +34,12 @@ func NewM() *M {
 // Dial starts the mux server.
 func (m *M) Dial(cfg Config) error {
 	m.Config = &cfg
+	for _, mw := range cfg.Middlewares {
+		switch mw {
+		case "snappy":
+			m.Middlewares = append(m.Middlewares, MwSnappy{})
+		}
+	}
 	return m.Server.Dial(cfg)
 }
 
@@ -70,7 +77,13 @@ func (m *M) listen(conn net.PacketConn) {
 				return
 			}
 			raw = raw[:n]
-
+			for _, mw := range m.Middlewares {
+				raw, err = mw.Receive(raw)
+				if err != nil {
+					logger.Error().Err(err).Str("status", "invalid").Msg("packet rejected")
+					return
+				}
+			}
 			if err := m.Handler(ctx, raw); err != nil {
 				// Logging must be done inside handler.
 				return
