@@ -60,9 +60,12 @@ func (m *M) listen(conn net.PacketConn) {
 	for {
 		raw := make([]byte, m.PacketSize)
 		n, addr, err := conn.ReadFrom(raw)
+		if n <= 0 {
+			continue
+		}
 		if err != nil {
 			log.Error().Err(err).Msg("failed to read")
-			return
+			continue
 		}
 
 		go func(addr net.Addr, raw []byte) {
